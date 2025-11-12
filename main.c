@@ -1,13 +1,11 @@
 #define XHL_FILES_IMPL
 
-#ifdef NDEBUG
 #define XFILES_ASSERT(cond)                                                                                            \
     if (!(cond))                                                                                                       \
     {                                                                                                                  \
-        fprintf(stderr, "[Error]: %s - %s:%d" #cond, __FUNCTION__, __LINE__);                                          \
+        fprintf(stderr, "[Error]: %s - %s:%d", #cond, __FUNCTION__, __LINE__);                                         \
         exit(1);                                                                                                       \
     }
-#endif
 
 #if defined(_WIN32)
 
