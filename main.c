@@ -210,8 +210,8 @@ int main(int argc, char* argv[])
             "\n"
             "Options:\n"
             "\n"
-            "  -i/-w     Input/watch directory. Defaults to your current working directory\n"
-            "  -o        Output directory. Defaults generating headers in the same\n"
+            "  -i/-in/-w Input/watch directory. Defaults to your current working directory\n"
+            "  -o/-out   Output directory. Defaults generating headers in the same\n"
             "            directory as the shader.\n"
             "  -l        Shader language. Use the same options as with sokol-shdc\n"
             "            eg. glsl430:wgsl:hlsl5:metal_macos:...etc\n"
@@ -248,9 +248,15 @@ int main(int argc, char* argv[])
 
     ctx.arg_watch = find_value("-i", argc, argv);
     if (!ctx.arg_watch)
+        ctx.arg_watch = find_value("-in", argc, argv);
+    if (!ctx.arg_watch)
         ctx.arg_watch = find_value("-w", argc, argv);
+
     ctx.arg_output = find_value("-o", argc, argv);
-    ctx.arg_lang   = find_value("-l", argc, argv);
+    if (!ctx.arg_output)
+        ctx.arg_output = find_value("-out", argc, argv);
+
+    ctx.arg_lang = find_value("-l", argc, argv);
 
     if (!ctx.arg_lang)
         ctx.arg_lang = DEFAULT_LANG;
