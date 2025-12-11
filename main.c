@@ -72,7 +72,7 @@ bool begins_with(const char* str, const char* prefix)
     return i > 0 && prefix[i] == 0;
 }
 
-int on_change(enum XFILES_WATCH_TYPE type, const char* path, void* udata)
+void on_change(enum XFILES_WATCH_TYPE type, const char* path, void* udata)
 {
     if (type == XFILES_WATCH_CREATED || type == XFILES_WATCH_MODIFIED)
     {
@@ -189,7 +189,6 @@ int on_change(enum XFILES_WATCH_TYPE type, const char* path, void* udata)
             fflush(stdout);
         }
     }
-    return g_running;
 }
 
 int main(int argc, char* argv[])
@@ -302,7 +301,17 @@ int main(int argc, char* argv[])
     signal(SIGINT, ctrl_c_callback);
     fflush(stdout);
 
-    xfiles_watch(ctx.path_watch, 50, &ctx, on_change);
+    xfiles_watch_context_t watch_ctx = xfiles_watch_create(ctx.path_watch, &ctx, on_change);
+    while (g_running)
+    {
+        xfiles_watch_flush(watch_ctx); // poll for items in queue, trigger on_change()
+#ifdef _WIN32
+        Sleep(50); // Windows, sleep 50ms
+#else
+        usleep(50000) // Unix, sleep 50ms
+#endif
+    }
+    xfiles_watch_destroy(watch_ctx); // cleanup
 
     return 0;
 }
