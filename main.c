@@ -1,4 +1,5 @@
 #define XHL_FILES_IMPL
+#define XHL_STRING_IMPL
 
 #define XFILES_ASSERT(cond)                                                                                            \
     if (!(cond))                                                                                                       \
@@ -25,6 +26,7 @@ const char* DEFAULT_LANG = "metal_macos";
 #include <stdio.h>
 #include <xhl/debug.h>
 #include <xhl/files.h>
+#include <xhl/string.h>
 
 struct Context
 {
@@ -35,6 +37,7 @@ struct Context
     const char* arg_watch;
     const char* arg_output;
     const char* arg_lang;
+    const char* arg_defines;
 
     char cmdbuf[2048];
 };
@@ -86,11 +89,13 @@ void on_change(enum XFILES_WATCH_TYPE type, const char* path, void* udata)
             const char*     name = xfiles_get_name(path);
 
             // sokol-shdc -i {INPATH} -o {OUTPATH} -l {LANG}
+            int cmdbuf_len = 0;
             if (ctx->arg_output != NULL) // output dir was specified
             {
-                snprintf(
+                cmdbuf_len += xtr_fmt(
                     ctx->cmdbuf,
                     sizeof(ctx->cmdbuf),
+                    0,
                     "sokol-shdc -i %s -o %s" XFILES_DIR_STR "%s.h -l %s",
                     path,
                     ctx->path_output,
@@ -100,8 +105,20 @@ void on_change(enum XFILES_WATCH_TYPE type, const char* path, void* udata)
             else // if (ctx->arg_output == NULL) // no output dir was specified.
             {
                 // Default to generating header in same dir as shader
-                snprintf(ctx->cmdbuf, sizeof(ctx->cmdbuf), "sokol-shdc -i %s -o %s.h -l %s", path, path, ctx->arg_lang);
+                cmdbuf_len += xtr_fmt(
+                    ctx->cmdbuf,
+                    sizeof(ctx->cmdbuf),
+                    0,
+                    "sokol-shdc -i %s -o %s.h -l %s",
+                    path,
+                    path,
+                    ctx->arg_lang);
             }
+            if (ctx->arg_defines)
+            {
+                cmdbuf_len += xtr_fmt(ctx->cmdbuf, sizeof(ctx->cmdbuf), cmdbuf_len, " --defines=%s", ctx->arg_defines);
+            }
+
             printf("Running command: %s\n", ctx->cmdbuf);
             fflush(stdout);
 
@@ -215,6 +232,8 @@ int main(int argc, char* argv[])
             "  -l        Shader language. Use the same options as with sokol-shdc\n"
             "            eg. glsl430:wgsl:hlsl5:metal_macos:...etc\n"
             "            Defaults to using metal_macos on macOS, and hlsl5 on Windows\n"
+            "  -d/-D     Optional colon seperated list of defines to pass to sokol-shdc.\n"
+            "            eg. sokol-shdc --defines=<define1:define2...>\n"
             "\n"
             "All arguments are optional.\n"
             "\n",
@@ -260,6 +279,10 @@ int main(int argc, char* argv[])
     if (!ctx.arg_lang)
         ctx.arg_lang = DEFAULT_LANG;
 
+    ctx.arg_defines = find_value("-d", argc, argv);
+    if (!ctx.arg_defines)
+        ctx.arg_defines = find_value("-D", argc, argv);
+
     for (int i = 0; i < 2; i++)
     {
         const char* in  = i == 0 ? ctx.arg_watch : ctx.arg_output;
@@ -284,9 +307,9 @@ int main(int argc, char* argv[])
 
         int pathlen = 0;
         if (begins_with(in, "./") || begins_with(in, "../"))
-            pathlen += snprintf(out + pathlen, sizeof(ctx.path_output) - pathlen, "%s", ctx.path_cwd);
+            pathlen += xtr_fmt(out + pathlen, sizeof(ctx.path_output) - pathlen, 0, "%s", ctx.path_cwd);
 
-        pathlen += snprintf(out + pathlen, sizeof(ctx.path_output) - pathlen, "%.*s", strlen_ret, in);
+        pathlen += xtr_fmt(out + pathlen, sizeof(ctx.path_output) - pathlen, 0, "%.*s", strlen_ret, in);
     }
     if (ctx.arg_watch == NULL)
         memcpy(ctx.path_watch, ctx.path_cwd, sizeof(ctx.path_cwd));
