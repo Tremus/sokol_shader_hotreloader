@@ -75,8 +75,10 @@ bool begins_with(const char* str, const char* prefix)
     return i > 0 && prefix[i] == 0;
 }
 
-void on_change(enum XFILES_WATCH_TYPE type, const char* path, void* udata)
+void on_change(const XFilesWatchEvent* event, void* udata)
 {
+    const enum XFilesWatchType type = event->type;
+    const char*                path = event->path;
     if (type == XFILES_WATCH_CREATED || type == XFILES_WATCH_MODIFIED)
     {
         const char* ext = xfiles_get_extension(path);
@@ -324,14 +326,14 @@ int main(int argc, char* argv[])
     signal(SIGINT, ctrl_c_callback);
     fflush(stdout);
 
-    xfiles_watch_context_t watch_ctx = xfiles_watch_create(ctx.path_watch, &ctx, on_change);
+    XFilesWatchContext* watch_ctx = xfiles_watch_create(ctx.path_watch, &ctx, on_change);
     while (g_running)
     {
         xfiles_watch_flush(watch_ctx); // poll for items in queue, trigger on_change()
 #ifdef _WIN32
         Sleep(50); // Windows, sleep 50ms
 #else
-        usleep(50000) // Unix, sleep 50ms
+        usleep(50000); // Unix, sleep 50ms
 #endif
     }
     xfiles_watch_destroy(watch_ctx); // cleanup
